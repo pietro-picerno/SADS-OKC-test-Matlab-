@@ -38,7 +38,7 @@ quasiV_acc = s_acc(:,3); % must point upward
 % reset the orientation of the phone using data during the 1st second of
 % recording:
 
-% this needs to be computed just in the 1st second adter start
+% this needs to be computed just in the 1st second after start
 m_quasiAP_acc = mean(quasiAP_acc(1:sampleFreq)); % average value 1st second to compute attitude
 m_quasiML_acc = mean(quasiML_acc(1:sampleFreq));
 m_quasiV_acc = mean(quasiV_acc(1:sampleFreq));
