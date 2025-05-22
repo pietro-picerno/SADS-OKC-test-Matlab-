@@ -2,10 +2,10 @@
 %% parameters from x-y-z calibrated acceleration signals measured by a triaxial 
 %% accelerometer placed on the dumbbell.
 %% The script reads Movella DOT file and prepares AP and ML accelerations 
-%% for subsequent computation of stabilometric parameters as performed by
-%% the function "processSwayAcc"
+%% for subsequent computation of time- and frequency-domain stabilometric parameters as performed by
+%% the functions "compute_timeDomain.m" and "compute_freqDomain.m"
 
-%% written by Pietro Picerno on August 2024 for submission to the Journal of Athletic Training
+%% written by Pietro Picerno on August 2024 for submission to XXXX
 clear all
 close all
 % read data file from Movella DOT placed on the dumbbell
@@ -53,29 +53,34 @@ acc_V_temp=(quasiAP_acc*sin(pitch_0)) + (quasiV_acc.*cos(pitch_0)); % Equation 2
 acc_ML=((quasiML_acc*cos(roll_0)) - (acc_V_temp.*sin(roll_0))); % Equation 3 Millecamps et al. 2015, points to the right
 acc_V=((quasiML_acc.*sin(roll_0)) + (acc_V_temp.*cos(roll_0))); % Equation 4 Millecamps et al. 2015, points upward
 
-% filtering according to Rigoberto
+% detrend (for time-domain parameters only)
+acc_AP_det = detrend(acc_AP,1);
+acc_ML_det = detrend(acc_ML,1);
 
-% define butter filter parameters
-cutoff = 0.3;
-butt_order = 4;
-[b,a] = butter(butt_order,2*cutoff/sampleFreq,'high'); % 1/18 resipiri al minuto, e toglie il drift (in questo caso dovuto all'inclinazione del sensore che acquisisce nel tempo) 
-% apply high pass filter
-acc_AP_filt_temp = filtfilt(b, a, acc_AP);
-acc_ML_filt_temp = filtfilt(b, a, acc_ML);
-% define Savitzky-Golay parameters
-sav_order = 3;
-framelen = 41; % frames of 41 points
-% apply Savitzky-Golay filter
-acc_AP_filt = sgolayfilt(acc_AP_filt_temp,sav_order,framelen);
-acc_ML_filt = sgolayfilt(acc_ML_filt_temp,sav_order,framelen);
+% filtering
+nyq = 0.5 * sampleFreq;
+cutoff = 14; % 
+normal_cutoff = cutoff / nyq; % normalized cutoff frequency (see "butter" doc)
+order = 4; % paper use order of 1. 
+[b,a] = butter(order,normal_cutoff,'low');
 
+% this goes for time-domain parameters calculation
+acc_AP_det_filt_30s =filtfilt(b,a,acc_AP_det);
+acc_ML_det_filt_30s =filtfilt(b,a,acc_ML_det);
+
+% this goes for frequency-domain parameters calculation (detrend is
+% built-in power spectral density analysis of Vieira and coll.)
+acc_AP_filt_30s =filtfilt(b,a,acc_AP);
+acc_ML_filt_30s =filtfilt(b,a,acc_ML);
 
 % cut til the first 20 seconds 
-acc_AP_filt_20s =  acc_AP_filt(1:20*sampleFreq);
-acc_ML_filt_20s =  acc_ML_filt(1:20*sampleFreq);
+acc_AP_det_filt_20s =  acc_AP_det_filt_30s(1:20*sampleFreq,:);
+acc_ML_det_filt_20s =  acc_ML_det_filt_30s(1:20*sampleFreq,:);
+acc_AP_filt_20s =  acc_AP_filt_30s(1:20*sampleFreq,:);
+acc_ML_filt_20s =  acc_ML_filt_30s(1:20*sampleFreq,:);
 
 % compute stabilometric parameters both for 20 s and 30 s test duration:
-% Time-domain stabilometric parameters	 
+% (time-domain)
 % Jerk	The average rate of change of the 2D horizontal acceleration signal (a measure of sway jerkiness), m2/s5
 % mDist	Mean distance (deviation) from the center of the sway path (trace of the spaghetti plot), m/s2
 % RMS	Root mean square of the 2D horizontal acceleration time series (quantifies the magnitude of the signal), m/s2
@@ -83,11 +88,21 @@ acc_ML_filt_20s =  acc_ML_filt(1:20*sampleFreq);
 % swayArea	This parameter approximates the area enclosed by the envelop of the sway path, m2/s5
 % ellipseArea	The area of an ellipse enclosing all points of the sway path with 95% confidence, m2/s4
 % swayFreq	Mean sway frequency (the number, per second, of loops that have to be run by the dumbbell to cover a trajectory equal to the total sway path), Hz
-% Frequency-domain stabilometric parameters	
-% SC	Spectral centroid, or centroidal frequency (frequency at which spectral mass is concentrated), Hz
+% (frequency-domain stabilometric parameters)
+% TP    total power [Hz]
 % F50	Median frequency (frequency band that contains up to 50% of the total spectrum), Hz
 % F95	Frequency band that contains up to 95% of the total spectrum, Hz
+% CF	centroidal Frequency or Spectral centroid (frequency at which spectral mass is concentrated), Hz
+% FD    frequency dispersion, unitless
 
-res_30s = processSwayAcc(acc_AP_filt, acc_ML_filt, sampleFreq, 1);
-res_20s = processSwayAcc(acc_AP_filt_20s, acc_ML_filt_20s, sampleFreq, 1);
+% compute time and freq domain parameters for 30 s
+res_freq_30s = compute_freqDomain(acc_AP_filt_30s, acc_ML_filt_30s, sampleFreq, cutoff,1);
+res_time_30s  = compute_timeDomain(acc_AP_det_filt_30s, acc_ML_det_filt_30s, sampleFreq);
+% [jerk, mDist, rms, range, swayArea, ellipseArea, meanFreq, TP, F50, F95, CF, FD]
+res_30s = [res_time_30s, res_freq_30s];
 
+% compute time and freq domain parameters for 20 s
+res_freq_20s = compute_freqDomain(acc_AP_filt_20s, acc_ML_filt_20s, sampleFreq, cutoff,0);
+res_time_20s  = compute_timeDomain(acc_AP_det_filt_20s, acc_ML_det_filt_20s, sampleFreq);
+% [jerk, mDist, rms, range, swayArea, ellipseArea, meanFreq, TP, F50, F95, CF, FD]
+res_20s = [res_time_20s, res_freq_20s];
