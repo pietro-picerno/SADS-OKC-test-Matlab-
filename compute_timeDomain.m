@@ -26,8 +26,17 @@ range =abs(max(A)-min(A)); % eq. A5 Martinez Mendez et al 2011, in m/s^2
 % perfectly correlates with jerk)
 pathLength = sum(sqrt(power(diff(acc_AP),2)+power(diff(acc_ML),2))); % eq. 8 Prieto et al 1996, in m/s^2
 
-% output #5, smoothness of the trajectory
-jerk = sum(sqrt(power(diff(acc_AP),2)+power(diff(acc_ML),2)))/testDuration; % eq. A8 Martinez Mendez et al 2011, in m^2/s^5
+% output #5, smoothness of the trajectory (jerk)
+% Rigoberto's 2012 ("The average change in acceleration", in m/s^3)
+% jerk = sum(sqrt(power(diff(acc_AP),2)+power(diff(acc_ML),2)))/testDuration; % eq. A8 Martinez Mendez et al 2011, in m^2/s^5
+
+% Mancini's 2012 ("Jerk was calculated as the time integral of the squared
+% derivative of acceleration in both AP and ML directions.", in m^2/s^5)
+dt = 1/sampleFreq;
+daML = gradient(aML, dt);
+daAP = gradient(aAP, dt);
+jerk = sum(daML.^2 + daAP.^2) * dt; % no need to normalize with respect to time as test duration is fixed
+
 
 % output #6, the mean frequency (MFREQ) is the rotational frequency, in revolutions per second or Hz, of the COP if it had traveled
 % the total excursions around a circle with a radius of the mean distance
