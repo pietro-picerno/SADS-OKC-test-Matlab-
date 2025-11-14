@@ -39,7 +39,7 @@ meanFreq = pathLength/(2*pi*mDist*testDuration); % eq. 20 Prieto 1996, in Hz
     for i = 1:length(acc_AP)-1
         swayArea_temp(i) = abs((acc_AP(i+1)*acc_ML(i))-(acc_AP(i)*acc_ML(i+1)));
     end
-    swayArea = sum(swayArea_temp)/(2*testDuration); % in m^2/s^5
+    swayArea = sum(swayArea_temp)/(2*testDuration); % in m^2/s^4
 
 % output #8, 95% confidence ellipse area
 eq17 = sum(acc_AP.*acc_ML)./length(acc_AP); % eq. 17 Prieto 1996
